@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FITCLUB PRO — ระบบสมาชิกฟิตเนส &amp; จองคลาสออกกำลังกาย</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Top Prototype & Schema Banner -->
+  <div class="prototype-banner">
+    <div class="container banner-inner">
+      <div class="banner-left">
+        <span class="proto-pill"><span class="dot-amber"></span> ต้นแบบ Prototype (localStorage)</span>
+        <span class="banner-text">โครงสร้างตรงตาม ER Diagram &amp; Data Dictionary <strong>7 ตาราง 35 คอลัมน์ 100%</strong></span>
+      </div>
+      <div class="banner-right">
+        <button type="button" class="btn-banner" id="btnOpenSchema">📄 ดูสคริปต์ MySQL (schema.sql)</button>
+        <button type="button" class="btn-banner" id="btnResetData">↻ รีเซ็ตข้อมูลเริ่มต้น</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Sticky Navigation -->
+  <header class="navbar">
+    <div class="container nav-inner">
+      <div class="brand" id="brandHome" role="button" tabindex="0">
+        <div class="brand-logo">FC</div>
+        <div class="brand-info">
+          <div class="brand-title">FITCLUB <span class="text-emerald">PRO</span></div>
+          <div class="brand-sub">ระบบสมาชิกฟิตเนส &amp; จองคลาสออกกำลังกาย</div>
+        </div>
+      </div>
+
+      <nav class="nav-tabs" aria-label="เมนูหลัก">
+        <button type="button" class="nav-tab active" data-role="home">หน้าหลัก</button>
+        <button type="button" class="nav-tab" data-role="user">สมาชิก (User)</button>
+        <button type="button" class="nav-tab" data-role="trainer">เทรนเนอร์ (Trainer)</button>
+        <button type="button" class="nav-tab" data-role="admin">ผู้ดูแลระบบ (Admin)</button>
+      </nav>
+
+      <div class="nav-actions">
+        <button type="button" class="btn-trace" id="btnToggleDbMode">
+          <span>🔍</span> <span id="dbModeLabel">เปิดโหมดชื่อคอลัมน์ DB</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Toast Notification -->
+  <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+  <!-- Main Content Area -->
+  <main class="container main-content" id="appRoot"></main>
+
+  <!-- Modal: MySQL schema.sql -->
+  <div class="modal-backdrop hidden" id="schemaModal" role="dialog" aria-modal="true" aria-labelledby="schemaModalTitle">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div>
+          <h3 id="schemaModalTitle">สคริปต์ฐานข้อมูล MySQL 8.0+ (schema.sql)</h3>
+          <p class="modal-sub">DDL ครบทั้ง 7 ตาราง 35 คอลัมน์ พร้อม PK, FK, Composite Keys, CHECK Constraints และกฎ ON DELETE</p>
+        </div>
+        <button type="button" class="btn-icon-close" id="btnCloseSchema" aria-label="ปิดหน้าต่าง">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="code-toolbar">
+          <span class="mono-tag">MySQL / MariaDB InnoDB · utf8mb4</span>
+          <div class="code-toolbar-actions">
+            <button type="button" class="btn btn-sm btn-outline" id="btnCopySql">📋 คัดลอกโค้ด SQL</button>
+            <button type="button" class="btn btn-sm btn-primary" id="btnDownloadSql">⬇ ดาวน์โหลด schema.sql</button>
+          </div>
+        </div>
+        <pre class="sql-code-block" id="sqlCodeDisplay"></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Register New Member (MEMBER + SUBSCRIPTION) -->
+  <div class="modal-backdrop hidden" id="registerModal" role="dialog" aria-modal="true" aria-labelledby="registerModalTitle">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <h3 id="registerModalTitle">สมัครสมาชิกใหม่ (Atomic Transaction)</h3>
+          <p class="modal-sub">บันทึกข้อมูลลงตาราง <code>MEMBER</code> และ <code>SUBSCRIPTION</code> พร้อมกันตามกฎ Total Participation (BR-6)</p>
+        </div>
+        <button type="button" class="btn-icon-close" id="btnCloseRegister" aria-label="ปิดหน้าต่าง">✕</button>
+      </div>
+      <form id="registerMemberForm" class="modal-body form-grid">
+        <div class="form-group">
+          <label>รหัสสมาชิก <span class="db-badge">MEMBER.member_id · PK CHAR(6)</span></label>
+          <input type="text" id="regMemberId" required pattern="^M\d{5}$" placeholder="เช่น M00006" />
+        </div>
+        <div class="form-group">
+          <label>เบอร์โทรศัพท์ <span class="db-badge">MEMBER.phone · CHAR(10)</span></label>
+          <input type="text" id="regPhone" required pattern="^\d{10}$" maxlength="10" placeholder="ตัวเลข 10 หลัก เช่น 0891234567" />
+        </div>
+        <div class="form-group">
+          <label>ชื่อจริง <span class="db-badge">MEMBER.first_name · VARCHAR(50)</span></label>
+          <input type="text" id="regFirstName" required maxlength="50" placeholder="เช่น กิตติพงศ์" />
+        </div>
+        <div class="form-group">
+          <label>นามสกุล <span class="db-badge">MEMBER.last_name · VARCHAR(50)</span></label>
+          <input type="text" id="regLastName" required maxlength="50" placeholder="เช่น ใจดี" />
+        </div>
+        <div class="form-group">
+          <label>อีเมล (ไม่บังคับ) <span class="db-badge">MEMBER.email · VARCHAR(50) NULL</span></label>
+          <input type="email" id="regEmail" maxlength="50" placeholder="name@example.com" />
+        </div>
+        <div class="form-group">
+          <label>วันเกิด <span class="db-badge">MEMBER.birth_date · DATE</span></label>
+          <input type="date" id="regBirthDate" required />
+        </div>
+        <div class="form-group full-span">
+          <label>เลือกแพ็กเกจสมาชิกเริ่มต้น (BR-6) <span class="db-badge">SUBSCRIPTION.plan_id · FK CHAR(4)</span></label>
+          <select id="regPlanId" required></select>
+        </div>
+        <div class="form-actions full-span">
+          <button type="button" class="btn btn-outline" id="btnCancelRegister">ยกเลิก</button>
+          <button type="submit" class="btn btn-primary">✓ ยืนยันการสมัครสมาชิก</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Edit Record (Admin CRUD UPDATE) -->
+  <div class="modal-backdrop hidden" id="editRecordModal" role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <h3 id="editModalTitle">แก้ไขข้อมูลในตาราง</h3>
+          <p class="modal-sub" id="editModalSub">ล็อกคอลัมน์ Primary Key เพื่อรักษาความคงสภาพของข้อมูล (Entity Integrity)</p>
+        </div>
+        <button type="button" class="btn-icon-close" id="btnCloseEdit" aria-label="ปิดหน้าต่าง">✕</button>
+      </div>
+      <form id="editRecordForm" class="modal-body form-grid">
+        <div id="editFormFields" class="form-grid full-span"></div>
+        <div class="form-actions full-span">
+          <button type="button" class="btn btn-outline" id="btnCancelEdit">ยกเลิก</button>
+          <button type="submit" class="btn btn-primary">✓ บันทึกการแก้ไข (UPDATE)</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container footer-inner">
+      FITCLUB PRO Database Project — 7 Tables · 35 Attributes · Strict ER &amp; Data Dictionary Consistency
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
